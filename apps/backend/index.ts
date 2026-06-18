@@ -7,38 +7,40 @@ app.use(express.json());
 app.use(cors());
 
 
-app.post("api/v1/pre-interview", async(req, res) => {
-
+app.post("/api/v1/pre-interview", async (req, res) => {
+  try {
     const { success, data } = PreinterviewSchema.safeParse(req.body);
 
     if (!success) {
-        return res.status(411).json({
-             message : "Incorrect body"
-        });
-        return 
+      return res.status(411).json({
+        message: "Incorrect body",
+      });
     }
 
-    const githubUrl = data.githubURL;
-   
+    const githubUsername = data.githubURL.split("/").pop();
 
-    const githubUsername = githubUrl.split("/").pop();
-  
+    const userRepos = await axios.get(
+      `https://api.github.com/users/${githubUsername}/repos`
+    );
 
-
-    // First Part ---- Fetching github repos data
-    const userRepos = await axios.get(`https://api.github.com/users/${githubUsername}/repos`);
     const filteredRepos = userRepos.data.map((x: any) => ({
-        discription: x.description,
-        name: x.name,
-        fullName: x.full_name,
-        starCount: x.stargazers_count,
-    })); 
-    console.log(filteredRepos);
+      description: x.description,
+      name: x.name,
+      fullName: x.full_name,
+      starCount: x.stargazers_count,
+    }));
 
+    return res.status(200).json({
+      repos: filteredRepos,
+    });
+  } catch (e) {
+    console.error(e);
 
-
-
-})
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+});
 
 
 
